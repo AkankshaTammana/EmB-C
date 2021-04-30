@@ -1,53 +1,61 @@
-/**
- * @file project_main.c
- * @author Bharath.G ()
- * @brief Project to Blink an LED at 1000ms ON and 500 ms OFF Interval
- * @version 0.1
- * @date 2021-04-23
- * 
- * @copyright Copyright (c) 2021
- * 
- */
-#include "project_config.h"
+#include <avr/io.h>
+#include <util/delay.h>
 
-#include "user_utils.h"
-#include "blinky.h"
-
-/**
- * @brief Initialize all the Peripherals and pin configurations
- * 
- */
-void peripheral_init(void)
-{
-	/* Configure LED Pin */
-	DDRB |= (1 << DDB0);
+void IntiADC(){
+    ADMUX=(1<<REFS0);
+    ADCSRA=(1<<ADEN)|(7<<ADPS0);
 }
 
-void change_led_state(uint8_t state)
-{
-	LED_PORT = (state << LED_PIN);
+void USARTInit(uint16_t ubrr_value){
+    UBRR0L = ubrr_value;
+    UBRR0H = (ubrr_value>>8)&0x00ff;
+    UCSR0C =(1<<UMSEL00)|(1<<UCSZ01)|(1<<UCSZ00);
+    UCSR0B =(1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0)|(1<<TXCIE0);
+}
+char USARTReadChar(){
+    while(!(UCSR0A & (1<<RXC0))){
+
+    }
+    return UDR0;
 }
 
-
-/**
- * @brief Main function where the code execution starts
- * 
- * @return int Return 0 if the program completes successfully
- * @note PORTB0 is in sink config. i.e when pin is Low, the LED will turn OFF
- * @note PORTB0 is in sink config. i.e when pin is High, the LED will turn ON
- */
 int main(void)
 {
-	/* Initialize Peripherals */
-	peripheral_init();
+    Activity1();
+    IntiADC();
+    uint16_t temp;
 
-	for(;;)
-	{
-        change_led_state(LED_ON);
-		delay_ms(LED_ON_TIME);
-		
-        change_led_state(LED_OFF);
-		delay_ms(LED_OFF_TIME);	
-	}
-	return 0;
+    //Activity 3 data
+    TCCR1A|=(1<<COM1A1)|(1<<WGM11)|(1<<WGM10);
+    TCCR1B|=(1<<WGM12)|(1<<CS11)|(1<<CS10);
+    DDRB|=(1<<PB1);
+
+    //Activity 4 data
+    USARTInit(103);
+    char test;
+
+    while(1){
+
+        if(!(PIND & (1<<PD0))){
+            if(!(PIND & (1<<PD4))){
+                PORTB |= (1<<PB0);
+            }else{
+                PORTB &= ~(1<<PB0);
+            }
+        }else{
+            PORTB &= ~(1<<PB0);
+        }
+
+        //Activity 2
+        temp = Activity2(5);
+
+        //Activity 3
+        test = Activity3(temp);
+
+        //Activity 4
+        Activity4(test);
+
+    }
+
+    return 0;
 }
