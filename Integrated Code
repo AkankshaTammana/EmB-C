@@ -1,0 +1,116 @@
+#include <avr/io.h>
+#include <util/delay.h>
+
+void port(){
+    DDRB |= (1<<PB0);
+    DDRD &= ~(1<<PD0);
+    PORTD |= (1<<PD0);
+    DDRD &= ~(1<<PD4);
+    PORTD |= (1<<PD4);
+}
+
+void IntiADC(){
+    ADMUX=(1<<REFS0);
+    ADCSRA=(1<<ADEN)|(7<<ADPS0);
+}
+
+uint16_t ReadADC(uint8_t ch){
+    ADMUX&=0xf8;
+    ch=ch&0b00000111;
+    ADMUX|=ch;
+    ADCSRA|=(1<<ADSC);
+    while(!(ADCSRA&(1<<ADIF)));
+    ADCSRA|=(1<<ADIF);
+    return(ADC);
+}
+
+char Pwm(uint16_t temp){
+    char temp1;
+    if(temp>0 && temp<=209){
+        OCR1A = 1024 * 0.2;
+        _delay_ms(200);
+        temp1 = 20;
+
+    }
+    else if(temp>209 && temp <= 509){
+        OCR1A = 1024 * 0.4;
+        _delay_ms(200);
+        temp1 = 25;
+    }
+    else if(temp>509 && temp <= 709){
+        OCR1A = 1024 * 0.7;
+        _delay_ms(200);
+        temp1 = 29;
+    }
+    else if(temp>709 && temp <= 1024){
+        OCR1A = 1024 * 0.95;
+        _delay_ms(200);
+        temp1 = 33;
+    }
+    else{
+        OCR1A = 0;
+        _delay_ms(2000);
+        temp1 = 0;
+    }
+    return temp1;
+}
+
+void USARTInit(uint16_t ubrr_value){
+    UBRR0L = ubrr_value;
+    UBRR0H = (ubrr_value>>8)&0x00ff;
+    UCSR0C =(1<<UMSEL00)|(1<<UCSZ01)|(1<<UCSZ00);
+    UCSR0B =(1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0)|(1<<TXCIE0);
+}
+char USARTReadChar(){
+    while(!(UCSR0A & (1<<RXC0))){
+
+    }
+    return UDR0;
+}
+void UARTWrite(char data){
+    while(!(UCSR0A & (1<<UDRE0)))
+    {
+
+    }
+    UDR0= data;
+}
+
+int main(void)
+{
+    port();
+    IntiADC();
+    uint16_t temp;
+
+    //Activity 3
+    TCCR1A|=(1<<COM1A1)|(1<<WGM11)|(1<<WGM10);
+    TCCR1B|=(1<<WGM12)|(1<<CS11)|(1<<CS10);
+    DDRB|=(1<<PB1);
+
+    USARTInit(103);
+    char test;
+
+    while(1){
+
+        if(!(PIND & (1<<PD0))){
+            if(!(PIND & (1<<PD4))){
+                PORTB |= (1<<PB0);
+            }else{
+                PORTB &= ~(1<<PB0);
+            }
+        }else{
+            PORTB &= ~(1<<PB0);
+        }
+
+        //Activity 2
+        temp = ReadADC(5);
+
+        //Activity3
+        test=Pwm(temp);
+
+        //Activity 4
+        UARTWrite(test);
+
+    }
+
+    return 0;
+}
